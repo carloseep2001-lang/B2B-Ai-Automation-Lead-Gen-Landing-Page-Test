@@ -142,7 +142,7 @@ export default function Audience() {
   };
 
   return (
-    <section className="relative px-6 py-[120px] md:py-[160px] overflow-x-clip">
+    <section id="why-us" className="relative px-6 py-[120px] md:py-[160px] overflow-x-clip">
       {/* Diffused ambient glow behind cards */}
       <div
         className="pointer-events-none absolute top-1/3 left-1/4 -translate-x-1/2 h-[420px] w-[500px] opacity-30 blur-[90px]"

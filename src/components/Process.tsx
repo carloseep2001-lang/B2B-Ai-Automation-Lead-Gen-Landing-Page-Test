@@ -7,26 +7,31 @@ const steps = [
     title: 'You submit the form',
     description:
       'Takes less than two minutes. No lengthy questionnaire — just your name, email, and a note about what\'s taking up time.',
+    badge: '~90 sec submission',
   },
   {
     title: 'We schedule a short intro call',
     description:
       'Twenty to thirty minutes. No pitch, no slides — just questions about your operations so we understand the context.',
+    badge: '20–30 min intro call',
   },
   {
     title: 'We review and map your workflows',
     description:
       'We do the work. You don\'t need to prepare anything elaborate or document your processes in advance.',
+    badge: 'Zero prep needed from you',
   },
   {
     title: 'You receive a clear audit report',
     description:
       'Specific opportunities, prioritized by impact. Written in plain language — no technical jargon, no assumptions.',
+    badge: 'Delivered within 48 hours',
   },
   {
     title: 'You decide what to do next',
     description:
       'Work with us, take it elsewhere, or do nothing at all. No pressure either way. The report is yours to keep.',
+    badge: '100% no-pressure decision',
   },
 ];
 
@@ -98,6 +103,9 @@ function ProcessStepDesktop({
       <p className="text-pretty text-sm leading-relaxed text-gray-400">
         {step.description}
       </p>
+      <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-charcoal-border bg-charcoal-base px-3 py-1 text-[11px] font-medium text-gray-500">
+        {step.badge}
+      </span>
     </motion.div>
   );
 }
@@ -169,6 +177,9 @@ function ProcessStepMobile({
         <p className="text-pretty text-sm leading-relaxed text-gray-400">
           {step.description}
         </p>
+        <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-charcoal-border bg-charcoal-base px-3 py-1 text-[11px] font-medium text-gray-500">
+          {step.badge}
+        </span>
       </div>
     </motion.div>
   );
@@ -183,7 +194,7 @@ export default function Process() {
   };
 
   return (
-    <section className="relative px-6 py-[120px] md:py-[160px] overflow-x-clip">
+    <section id="process" className="relative px-6 py-[120px] md:py-[160px] overflow-x-clip">
       {/* Diffused ambient glow */}
       <div
         className="pointer-events-none absolute top-1/4 right-1/4 h-[440px] w-[440px] opacity-25 blur-[100px]"
