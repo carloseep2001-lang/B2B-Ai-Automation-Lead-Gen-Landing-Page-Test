@@ -1,0 +1,53 @@
+{
+  "name": "B2B - Normalize prospect batch",
+  "nodes": [
+    {
+      "id": "b2b-010",
+      "name": "Input from lead finder",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "b2b-011",
+      "name": "Normalize and deduplicate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const normalizeProspects = function normalizeProspects(items) {\n  const text = value => typeof value === 'string' ? value.trim() : '';\n  const email = value => {\n    const candidate = text(value).toLowerCase();\n    return candidate.length <= 254 && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(candidate) ? candidate : '';\n  };\n  const web = value => {\n    let candidate = text(value);\n    if (!candidate) return '';\n    if (!/^[a-z][a-z0-9+.-]*:/i.test(candidate)) candidate = `https://${candidate}`;\n    // No URL/module dependency: n8n sandboxes may not expose the URL global.\n    const match = candidate.match(/^(https?):\\/\\/([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)(:\\d{1,5})?([/?#][^\\s\\\\]*)?$/i);\n    return match ? `${match[1].toLowerCase()}://${match[2].toLowerCase()}${match[3] || ''}${match[4] || '/'}` : '';\n  };\n  const rows = [];\n  const byId = new Map();\n  let rejected = 0;\n  const add = (company, person = {}) => {\n    const companyName = text(company['Company Name'] || company['Company name'] || company.name || company.displayName?.text);\n    const personName = text(person.name || person['Owner (person) name'] || company['Owner (person) name']);\n    const address = text(company.formatted_address || company.formattedAddress || company.address);\n    const site = web(company.website || company.websiteUri || company['website URL']);\n    const placeId = text(company.place_id || company.id);\n    const contactEmail = email(person.email || person['Email address'] || company['Email address'] || company.email);\n    const identity = placeId || (site ? site.split('/')[2].replace(/:\\d+$/, '').replace(/^www\\./, '') : '') ||\n      (companyName && address ? `${companyName.toLowerCase()}|${address.toLowerCase()}` : '');\n    if (!companyName || (!identity && !contactEmail)) { rejected++; return; }\n    const key = contactEmail ? `email:${contactEmail}` : `company:${identity}|person:${personName.toLowerCase()}`;\n    const row = {\n      lead_id: key,\n      'Company name': companyName,\n      'Owner (person) name': personName,\n      'Email address': contactEmail,\n      'Instagram URL': web(person.Instagram || person.instagram || company['Instagram URL']),\n      'Twitter URL': web(person.Twitter || person.twitter || company['Twitter URL']),\n      'LinkedIn URL': web(person.LinkedIn || person.linkedin || company['LinkedIn URL']),\n      'website URL': site,\n      description: text(company.description),\n      'phone number': text(company.nationalPhoneNumber || company.formatted_phone_number || company['phone number']),\n      place_id: placeId,\n      address,\n      ...(company.geometry && typeof company.geometry === 'object' ? { geometry: company.geometry } : {}),\n      ...(company.location && typeof company.location === 'object' ? { location: company.location } : {}),\n    };\n    if (byId.has(key)) {\n      const existing = byId.get(key);\n      for (const [field, value] of Object.entries(row)) if (!existing[field] && value) existing[field] = value;\n    } else {\n      byId.set(key, row);\n      rows.push(row);\n    }\n  };\n  for (const item of items) {\n    const root = item?.json ?? item;\n    const records = Array.isArray(root) ? root : Array.isArray(root?.results) ? root.results :\n      Array.isArray(root?.places) ? root.places : [root];\n    for (let record of records) {\n      // An AI node may emit a JSON string; reject prose instead of guessing contacts.\n      if (typeof record?.output === 'string') {\n        try { record = JSON.parse(record.output.replace(/^```(?:json)?\\s*|\\s*```$/g, '')); }\n        catch { rejected++; continue; }\n      } else if (record?.output && typeof record.output === 'object') {\n        record = record.output;\n      }\n      const companies = Array.isArray(record) ? record : [record];\n      for (const company of companies) {\n        if (!company || typeof company !== 'object') { rejected++; continue; }\n        const people = Array.isArray(company['Person Name']) ? company['Person Name'] : [];\n        if (people.length) for (const person of people) add(company, person && typeof person === 'object' ? person : {});\n        else add(company);\n      }\n    }\n  }\n  return { rows, rejected };\n};\nconst result = normalizeProspects($input.all());\nif (!result.rows.length) throw new Error('No identifiable prospects: inspect the source schema before saving.');\nreturn result.rows.map(row => ({json:row}));"
+      },
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Input from lead finder": {
+      "main": [
+        [
+          {
+            "node": "Normalize and deduplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 30,
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none"
+  }
+}

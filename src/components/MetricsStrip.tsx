@@ -2,20 +2,20 @@ import { motion, useReducedMotion } from 'framer-motion';
 
 const metrics = [
   {
-    value: '15+ hrs',
-    label: 'Average weekly hours saved per team member',
+    value: 'Your workflow',
+    label: 'Review where manual tasks and handoffs slow the work',
   },
   {
-    value: '< 48 hrs',
-    label: 'Turnaround time for written audit delivery',
+    value: 'Clear priorities',
+    label: 'A written review of opportunities and next steps',
   },
   {
-    value: '100%',
-    label: 'Standalone value — no lock-in or obligations',
+    value: 'Your tools',
+    label: 'Check what can connect with your current setup',
   },
   {
-    value: '0 Days',
-    label: 'Internal preparation required from your team',
+    value: 'Your choice',
+    label: 'Decide whether to proceed after reviewing the recommendations',
   },
 ];
 

@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "workflows:build": "node scripts/build-workflows.mjs",
     "test": "node --experimental-strip-types --test tests/*.test.*",
     "dev": "vite",
     "build": "vite build",

@@ -30,6 +30,8 @@ The page content is split into components under `src/components/`. The audit for
 
 ## Connect lead capture
 
+Three inactive n8n imports and their connection instructions are in [workflows/README.md](workflows/README.md). Run `npm run workflows:build` to regenerate them from the shared validation and cleanup logic.
+
 Deploy to Vercel so `api/audit.js` runs alongside the Vite frontend. Configure environment variables using `.env.example` as a template:
 
 - `N8N_AUDIT_WEBHOOK_URL`: the published workflow's HTTPS **production** `/webhook/` URL, server-only.

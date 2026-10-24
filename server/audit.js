@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { normalizeAuditPayload } from './audit-payload.js';
 
 const maxBodyBytes = 16_384;
 
@@ -7,11 +8,6 @@ function json(body, status = 200, headers = {}) {
     status,
     headers: { 'Cache-Control': 'no-store', ...headers },
   });
-}
-
-function validList(value, maxItems) {
-  return Array.isArray(value) && value.length > 0 && value.length <= maxItems &&
-    value.every(item => typeof item === 'string' && item.trim().length > 0 && item.length <= 200);
 }
 
 export async function handleAuditRequest(request, { env = process.env, send = fetch } = {}) {
@@ -44,13 +40,11 @@ export async function handleAuditRequest(request, { env = process.env, send = fe
     return json({ ok: false, error: 'Invalid request data.' }, 400);
   }
 
-  if (!data || typeof data !== 'object' ||
-      typeof data.requestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(data.requestId) ||
-      typeof data.name !== 'string' || !data.name.trim() || data.name.length > 120 ||
-      typeof data.email !== 'string' || data.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim()) ||
-      !validList(data.bottlenecks, 4) || !validList(data.tools, 8) ||
-      !['1 – 5 hrs / person', '5 – 15 hrs / person', '15+ hrs / person'].includes(data.hoursLost)) {
-    return json({ ok: false, error: 'Please complete all questions and enter a valid name and email.' }, 400);
+  let lead;
+  try {
+    lead = normalizeAuditPayload(data);
+  } catch (error) {
+    return json({ ok: false, error: error.message }, 400);
   }
 
   let webhook;
@@ -65,13 +59,7 @@ export async function handleAuditRequest(request, { env = process.env, send = fe
   }
 
   const payload = {
-    requestId: data.requestId,
-    name: data.name.trim(),
-    email: data.email.trim().toLowerCase(),
-    bottlenecks: [...new Set(data.bottlenecks.map(item => item.trim()))],
-    tools: [...new Set(data.tools.map(item => item.trim()))],
-    hoursLost: data.hoursLost,
-    source: 'website-audit',
+    ...lead,
     receivedAt: new Date().toISOString(),
     deliveryId: randomUUID(),
   };
