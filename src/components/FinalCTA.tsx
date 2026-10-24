@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { submitAudit } from '../lib/submitAudit';
+import { bookingUrl } from '../lib/publicConfig';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   ArrowRight,
@@ -40,6 +42,10 @@ export default function FinalCTA() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [requestId] = useState(() => crypto.randomUUID());
+  const submissionInFlight = useRef(false);
   const shouldReduceMotion = useReducedMotion();
 
   const toggleBottleneck = (i: number) => {
@@ -62,10 +68,29 @@ export default function FinalCTA() {
     return false;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canProceed()) return;
-    setSubmitted(true);
+    if (step !== totalSteps - 1 || !canProceed() || selectedBottlenecks.length === 0 ||
+        selectedTools.length === 0 || selectedHours === null || submissionInFlight.current) return;
+    submissionInFlight.current = true;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await submitAudit({
+        requestId,
+        name: name.trim(),
+        email: email.trim(),
+        bottlenecks: selectedBottlenecks.map(i => bottlenecks[i]),
+        tools: selectedTools.map(i => toolOptions[i]),
+        hoursLost: hoursOptions[selectedHours],
+      });
+      setSubmitted(true);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Please try again shortly.');
+    } finally {
+      submissionInFlight.current = false;
+      setSubmitting(false);
+    }
   };
 
   const next = () => setStep((s) => Math.min(s + 1, totalSteps - 1));
@@ -149,7 +174,7 @@ export default function FinalCTA() {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} aria-busy={submitting}>
               <AnimatePresence mode="wait">
                 {/* Step 1: Bottlenecks */}
                 {step === 0 && (
@@ -171,6 +196,7 @@ export default function FinalCTA() {
                           <button
                             key={i}
                             type="button"
+                            aria-pressed={selected}
                             onClick={() => toggleBottleneck(i)}
                             className={`group flex items-center gap-4 rounded-xl border px-5 py-4 text-left transition-all duration-200 ${
                               selected
@@ -217,6 +243,7 @@ export default function FinalCTA() {
                           <button
                             key={i}
                             type="button"
+                            aria-pressed={selected}
                             onClick={() => toggleTool(i)}
                             className={`rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 ${
                               selected
@@ -252,6 +279,7 @@ export default function FinalCTA() {
                           <button
                             key={i}
                             type="button"
+                            aria-pressed={selected}
                             onClick={() => setSelectedHours(i)}
                             className={`group flex items-center justify-between rounded-xl border px-5 py-4 transition-all duration-200 ${
                               selected
@@ -298,6 +326,9 @@ export default function FinalCTA() {
                         <input
                           id="name"
                           type="text"
+                          autoComplete="name"
+                          maxLength={120}
+                          disabled={submitting}
                           required
                           value={name}
                           onChange={(e) => setName(e.target.value)}
@@ -312,6 +343,9 @@ export default function FinalCTA() {
                         <input
                           id="email"
                           type="email"
+                          autoComplete="email"
+                          maxLength={254}
+                          disabled={submitting}
                           required
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
@@ -324,12 +358,19 @@ export default function FinalCTA() {
                 )}
               </AnimatePresence>
 
+              {submitError && (
+                <p role="alert" className="mt-6 rounded-lg border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">
+                  {submitError}
+                </p>
+              )}
+
               {/* Navigation buttons */}
               <div className="mt-8 flex items-center justify-between gap-4">
                 {step > 0 ? (
                   <button
                     type="button"
                     onClick={back}
+                    disabled={submitting}
                     className="flex items-center gap-2 rounded-lg border border-charcoal-border bg-charcoal-base px-5 py-3 text-sm font-medium text-gray-400 transition-colors hover:border-gray-600 hover:text-gray-200"
                   >
                     <ArrowLeft className="h-4 w-4" />
@@ -343,7 +384,7 @@ export default function FinalCTA() {
                   <button
                     type="button"
                     onClick={next}
-                    disabled={!canProceed()}
+                    disabled={!canProceed() || submitting}
                     className="glow-button group inline-flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white transition-all hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
                   >
                     Continue
@@ -355,10 +396,10 @@ export default function FinalCTA() {
                     whileHover={shouldReduceMotion ? {} : { scale: 1.015 }}
                     whileTap={shouldReduceMotion ? {} : { scale: 0.985 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    disabled={!canProceed()}
+                    disabled={!canProceed() || submitting}
                     className="glow-button group inline-flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white transition-all hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
                   >
-                    Request My Custom Automation Audit
+                    {submitting ? 'Sending your request…' : 'Request My Custom Automation Audit'}
                     <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                   </motion.button>
                 )}
@@ -382,18 +423,18 @@ export default function FinalCTA() {
             </div>
 
             {/* Calendar fallback */}
-            <div className="mt-6 border-t border-charcoal-border pt-6 text-center">
+            {bookingUrl && <div className="mt-6 border-t border-charcoal-border pt-6 text-center">
               <p className="text-sm text-gray-500">
                 Need urgent review?{' '}
                 <a
-                  href="#"
+                  href={bookingUrl}
                   className="inline-flex items-center gap-1.5 font-medium text-sky-400 transition-colors hover:text-sky-300"
                 >
                   <Calendar className="h-4 w-4" />
-                  Book a 20-minute call directly on Cal.com
+                  Book a 20-minute call
                 </a>
               </p>
-            </div>
+            </div>}
           </div>
         ) : (
           <motion.div
@@ -401,6 +442,7 @@ export default function FinalCTA() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             className="mx-auto mt-14 flex max-w-md flex-col items-center rounded-2xl border border-sky-400/30 bg-charcoal-base p-10 shadow-[0_0_40px_rgba(56,189,248,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]"
+            role="status"
           >
             <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-sky-400/40 bg-sky-500/15 shadow-[0_0_24px_rgba(56,189,248,0.3)]">
               <Check className="h-6 w-6 text-sky-400" />
