@@ -36,10 +36,10 @@ export default function WorkflowTeaser() {
           className="mb-8 text-center"
         >
           <p className="mb-3 text-sm font-medium uppercase tracking-widest text-accent">
-            See the difference
+            Illustrative workflow
           </p>
           <h2 className="text-balance text-2xl font-semibold tracking-tight text-gray-50 md:text-3xl">
-            The same workflow, before and after automation
+            How a manual process could be connected
           </h2>
         </motion.div>
 
@@ -48,6 +48,7 @@ export default function WorkflowTeaser() {
           <div className="relative flex items-center rounded-full border border-charcoal-border bg-charcoal-elevated p-1">
             <button
               onClick={() => setMode('manual')}
+              aria-pressed={isManual}
               className={`relative z-10 rounded-full px-5 py-2 text-xs font-medium transition-colors duration-200 sm:px-6 sm:text-sm ${
                 isManual ? 'text-white' : 'text-gray-500 hover:text-gray-300'
               }`}
@@ -56,6 +57,7 @@ export default function WorkflowTeaser() {
             </button>
             <button
               onClick={() => setMode('automated')}
+              aria-pressed={!isManual}
               className={`relative z-10 rounded-full px-5 py-2 text-xs font-medium transition-colors duration-200 sm:px-6 sm:text-sm ${
                 !isManual ? 'text-white' : 'text-gray-500 hover:text-gray-300'
               }`}
@@ -168,7 +170,7 @@ export default function WorkflowTeaser() {
                   }`}
                 >
                   <Clock className="h-3.5 w-3.5" />
-                  {isManual ? '~4.5 hrs average delay' : '< 2.3 seconds end-to-end'}
+                  {isManual ? 'Separate manual handoffs' : 'Triggered by a submission'}
                 </div>
                 <div
                   className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium ${
@@ -180,12 +182,12 @@ export default function WorkflowTeaser() {
                   {isManual ? (
                     <>
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      High human error risk
+                      Repeated manual copying
                     </>
                   ) : (
                     <>
                       <ShieldAlert className="h-3.5 w-3.5" />
-                      0% human entry error
+                      Validation before saving
                     </>
                   )}
                 </div>
@@ -204,7 +206,7 @@ export default function WorkflowTeaser() {
           ) : (
             <>
               <CheckCircle2 className="h-4 w-4 text-sky-400/80" />
-              <span>3 streamlined steps — instant, reliable, fully automated</span>
+              <span>3 connected steps — exact timing and integrations depend on the project</span>
             </>
           )}
         </div>

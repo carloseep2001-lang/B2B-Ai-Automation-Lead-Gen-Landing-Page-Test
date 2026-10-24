@@ -1,4 +1,5 @@
 import { ArrowUp, Mail, ShieldCheck } from 'lucide-react';
+import { contactEmail } from '../lib/publicConfig';
 
 export default function Footer() {
   const scrollToTop = () => {
@@ -60,13 +61,13 @@ export default function Footer() {
           </div>
 
           <div className="flex flex-wrap items-center gap-6 text-sm text-gray-400">
-            <a
-              href="mailto:hello@automationstudio.io"
+            {contactEmail && <a
+              href={`mailto:${contactEmail}`}
               className="group flex items-center gap-2 transition-colors hover:text-sky-300"
             >
               <Mail className="h-4 w-4 text-gray-500 transition-colors group-hover:text-sky-400" />
-              <span>hello@automationstudio.io</span>
-            </a>
+              <span>{contactEmail}</span>
+            </a>}
             <button
               onClick={scrollToTop}
               className="group flex items-center gap-1.5 rounded-full border border-charcoal-border bg-charcoal-elevated px-3 py-1.5 text-xs text-gray-400 transition-all hover:border-gray-500 hover:text-white"
