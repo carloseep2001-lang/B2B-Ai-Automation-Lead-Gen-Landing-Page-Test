@@ -1,4 +1,5 @@
 import { ArrowUp, Mail, ShieldCheck } from 'lucide-react';
+import { contactEmail } from '../lib/publicConfig';
 
 export default function Footer() {
   const scrollToTop = () => {
@@ -17,7 +18,7 @@ export default function Footer() {
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
             </span>
             <span className="text-xs font-mono tracking-wide uppercase text-gray-300 sm:text-sm">
-              Accepting Audit Requests for Q3 / Q4
+              Accepting New Audit Requests
             </span>
           </div>
 
@@ -51,7 +52,7 @@ export default function Footer() {
                 </svg>
               </div>
               <span className="text-base font-medium tracking-tight text-white">
-                Synthetix<span className="font-light text-gray-400">Ops</span>
+                AgileFlow <span className="font-light text-sky-400">AI</span>
               </span>
             </div>
             <p className="mt-2 text-xs text-gray-500 max-w-sm">
@@ -60,13 +61,13 @@ export default function Footer() {
           </div>
 
           <div className="flex flex-wrap items-center gap-6 text-sm text-gray-400">
-            <a
-              href="mailto:hello@automationstudio.io"
+            {contactEmail && <a
+              href={`mailto:${contactEmail}`}
               className="group flex items-center gap-2 transition-colors hover:text-sky-300"
             >
               <Mail className="h-4 w-4 text-gray-500 transition-colors group-hover:text-sky-400" />
-              <span>hello@automationstudio.io</span>
-            </a>
+              <span>{contactEmail}</span>
+            </a>}
             <button
               onClick={scrollToTop}
               className="group flex items-center gap-1.5 rounded-full border border-charcoal-border bg-charcoal-elevated px-3 py-1.5 text-xs text-gray-400 transition-all hover:border-gray-500 hover:text-white"
@@ -79,7 +80,7 @@ export default function Footer() {
 
         {/* Bottom Legal bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-charcoal-border/50 pt-8 text-xs text-gray-600">
-          <p>© {new Date().getFullYear()} SynthetixOps. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} AgileFlow AI. All rights reserved.</p>
           <div className="flex gap-6">
             <a href="#why-us" className="hover:text-gray-400 transition-colors">Why Us</a>
             <a href="#audit-offer" className="hover:text-gray-400 transition-colors">Offer</a>

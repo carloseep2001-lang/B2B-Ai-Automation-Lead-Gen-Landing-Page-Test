@@ -99,7 +99,7 @@ export default function Hero({ onRequestAudit }: HeroProps) {
         >
           <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(56,189,248,0.7)]" />
           <p className="text-xs font-medium uppercase tracking-widest text-gray-400">
-            [Agency Name]
+            AgileFlow AI
           </p>
         </motion.div>
 

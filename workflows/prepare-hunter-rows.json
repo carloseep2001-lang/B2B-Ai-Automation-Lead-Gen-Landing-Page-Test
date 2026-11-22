@@ -1,0 +1,53 @@
+{
+  "name": "B2B - Prepare Hunter verification batch",
+  "nodes": [
+    {
+      "id": "b2b-012",
+      "name": "Input sheet rows",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "b2b-013",
+      "name": "Keep eligible rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const prepareHunterRows = function prepareHunterRows(items) {\n  const eligible = [];\n  const skipped = [];\n  const seen = new Set();\n  for (const [index, item] of items.entries()) {\n    const row = item?.json ?? item ?? {};\n    const email = typeof row['Email address'] === 'string' ? row['Email address'].trim().toLowerCase() : '';\n    const number = Number(row.row_number);\n    const processed = ['yes', 'true', '1'].includes(String(row['hunter search'] ?? '').trim().toLowerCase());\n    let reason = '';\n    if (processed) reason = 'already_checked';\n    else if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254) reason = 'missing_or_invalid_email';\n    else if (!Number.isSafeInteger(number) || number < 2) reason = 'missing_sheet_row';\n    else if (seen.has(email)) reason = 'duplicate_email';\n    if (reason) { skipped.push({ index, reason }); continue; }\n    seen.add(email);\n    eligible.push({ json: { ...row, 'Email address': email, row_number: number }, pairedItem: { item: index } });\n  }\n  return { eligible, skipped };\n};\nreturn prepareHunterRows($input.all()).eligible;"
+      },
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Input sheet rows": {
+      "main": [
+        [
+          {
+            "node": "Keep eligible rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 30,
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none"
+  }
+}

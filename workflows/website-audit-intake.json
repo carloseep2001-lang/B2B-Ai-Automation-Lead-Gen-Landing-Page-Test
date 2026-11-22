@@ -1,0 +1,393 @@
+{
+  "name": "B2B - Website audit intake (setup required)",
+  "nodes": [
+    {
+      "id": "b2b-001",
+      "name": "Audit webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "b2b-audit-v1",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "c080de30-3ba1-4cb8-b757-4c8a147c6d37"
+    },
+    {
+      "id": "b2b-002",
+      "name": "Configure destination",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "sheet-id",
+              "name": "spreadsheet_id",
+              "value": "SET_SPREADSHEET_ID",
+              "type": "string"
+            },
+            {
+              "id": "sheet-name",
+              "name": "sheet_name",
+              "value": "Website enquiries",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "id": "b2b-003",
+      "name": "Validate audit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const normalizeAuditPayload = function normalizeAuditPayload(data) {\n  const validList = (value, maxItems) => Array.isArray(value) && value.length > 0 &&\n    value.length <= maxItems && value.every(item => typeof item === 'string' && item.trim() && item.length <= 200);\n  if (!data || typeof data !== 'object' || Array.isArray(data) ||\n      typeof data.requestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(data.requestId) ||\n      typeof data.name !== 'string' || !data.name.trim() || data.name.length > 120 ||\n      typeof data.email !== 'string' || data.email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(data.email.trim()) ||\n      !validList(data.bottlenecks, 4) || !validList(data.tools, 8) ||\n      !['1 – 5 hrs / person', '5 – 15 hrs / person', '15+ hrs / person'].includes(data.hoursLost)) {\n    throw new Error('Please complete all questions and enter a valid name and email.');\n  }\n  return {\n    requestId: data.requestId,\n    name: data.name.trim(),\n    email: data.email.trim().toLowerCase(),\n    bottlenecks: [...new Set(data.bottlenecks.map(item => item.trim()))],\n    tools: [...new Set(data.tools.map(item => item.trim()))],\n    hoursLost: data.hoursLost,\n    source: 'website-audit',\n  };\n};\nconst input = $input.first().json;\ntry {\n  const lead = normalizeAuditPayload(input.body);\n  if (!/^[a-zA-Z0-9_-]{20,}$/.test(input.spreadsheet_id || '') || input.spreadsheet_id === 'SET_SPREADSHEET_ID') {\n    return [{json:{valid:false,responseCode:503,response:{ok:false,error:'Lead storage is not configured.'}}}];\n  }\n  return [{json:{valid:true,spreadsheet_id:input.spreadsheet_id,sheet_name:input.sheet_name,\n    lead:{...lead,receivedAt:new Date().toISOString()}}}];\n} catch {\n  return [{json:{valid:false,responseCode:400,response:{ok:false,error:'Invalid audit request.'}}}];\n}"
+      },
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "id": "b2b-004",
+      "name": "Valid request?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "valid",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "id": "b2b-005",
+      "name": "Save enquiry",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.spreadsheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json.sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "requestId"
+          ],
+          "value": {
+            "requestId": "={{ $json.lead.requestId }}",
+            "name": "={{ $json.lead.name }}",
+            "email": "={{ $json.lead.email }}",
+            "bottlenecks": "={{ JSON.stringify($json.lead.bottlenecks) }}",
+            "tools": "={{ JSON.stringify($json.lead.tools) }}",
+            "hoursLost": "={{ $json.lead.hoursLost }}",
+            "source": "={{ $json.lead.source }}",
+            "receivedAt": "={{ $json.lead.receivedAt }}"
+          },
+          "schema": [
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "bottlenecks",
+              "displayName": "bottlenecks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tools",
+              "displayName": "tools",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "hoursLost",
+              "displayName": "hoursLost",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "receivedAt",
+              "displayName": "receivedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "RAW",
+          "useAppend": false
+        }
+      },
+      "position": [
+        960,
+        -120
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "b2b-006",
+      "name": "Confirm saved enquiry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const saved = $input.first().json;\nconst requestId = $('Validate audit').first().json.lead.requestId;\nif (saved.requestId !== requestId) throw new Error('Saved lead acknowledgement mismatch');\nreturn [{json:{ok:true,requestId}}];"
+      },
+      "position": [
+        1200,
+        -120
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "b2b-007",
+      "name": "Respond saved",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "position": [
+        1440,
+        -120
+      ]
+    },
+    {
+      "id": "b2b-008",
+      "name": "Respond invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.response }}",
+        "options": {
+          "responseCode": "={{ $json.responseCode }}"
+        }
+      },
+      "position": [
+        960,
+        160
+      ]
+    },
+    {
+      "id": "b2b-009",
+      "name": "Respond storage error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":false,\"error\":\"Could not save the enquiry. Please retry.\"}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "position": [
+        1200,
+        180
+      ]
+    }
+  ],
+  "connections": {
+    "Audit webhook": {
+      "main": [
+        [
+          {
+            "node": "Configure destination",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configure destination": {
+      "main": [
+        [
+          {
+            "node": "Validate audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate audit": {
+      "main": [
+        [
+          {
+            "node": "Valid request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid request?": {
+      "main": [
+        [
+          {
+            "node": "Save enquiry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save enquiry": {
+      "main": [
+        [
+          {
+            "node": "Confirm saved enquiry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond storage error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm saved enquiry": {
+      "main": [
+        [
+          {
+            "node": "Respond saved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond storage error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 30,
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none"
+  }
+}
